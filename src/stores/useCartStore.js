@@ -36,11 +36,11 @@ export const useCartStore = create((set, get) => ({
 	getCartItems: async () => {
 		try {
 			const res = await axios.get("/cart");
-			set({ cart: res.data });
+			set({ cart: Array.isArray(res.data) ? res.data : [] });
 			get().calculateTotals();
 		} catch (error) {
 			set({ cart: [] });
-			toast.error(error.response.data.message || "An error occurred");
+			toast.error(error.response?.data?.message || "An error occurred");
 		}
 	},
 	clearCart: async () => {
@@ -55,32 +55,40 @@ export const useCartStore = create((set, get) => ({
 				const existingItem = prevState.cart.find((item) => item._id === product._id);
 				const newCart = existingItem
 					? prevState.cart.map((item) =>
-							item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
-					  )
+						item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
+					)
 					: [...prevState.cart, { ...product, quantity: 1 }];
 				return { cart: newCart };
 			});
 			get().calculateTotals();
 		} catch (error) {
-			toast.error(error.response.data.message || "An error occurred");
+			toast.error(error.response?.data?.message || "An error occurred");
 		}
 	},
 	removeFromCart: async (productId) => {
-		await axios.delete(`/cart`, { data: { productId } });
-		set((prevState) => ({ cart: prevState.cart.filter((item) => item._id !== productId) }));
-		get().calculateTotals();
+		try {
+			await axios.delete(`/cart`, { data: { productId } });
+			set((prevState) => ({ cart: prevState.cart.filter((item) => item._id !== productId) }));
+			get().calculateTotals();
+		} catch (error) {
+			toast.error(error.response?.data?.message || "An error occurred");
+		}
 	},
 	updateQuantity: async (productId, quantity) => {
-		if (quantity === 0) {
-			get().removeFromCart(productId);
-			return;
-		}
+		try {
+			if (quantity === 0) {
+				get().removeFromCart(productId);
+				return;
+			}
 
-		await axios.put(`/cart/${productId}`, { quantity });
-		set((prevState) => ({
-			cart: prevState.cart.map((item) => (item._id === productId ? { ...item, quantity } : item)),
-		}));
-		get().calculateTotals();
+			await axios.put(`/cart/${productId}`, { quantity });
+			set((prevState) => ({
+				cart: prevState.cart.map((item) => (item._id === productId ? { ...item, quantity } : item)),
+			}));
+			get().calculateTotals();
+		} catch (error) {
+			toast.error(error.response?.data?.message || "An error occurred");
+		}
 	},
 	calculateTotals: () => {
 		const { cart, coupon } = get();
