@@ -24,20 +24,28 @@ export const useProductStore = create((set) => ({
 		set({ loading: true });
 		try {
 			const response = await axios.get("/products");
-			set({ products: response.data.products, loading: false });
+			// 🔥 FIX
+			const productsData = Array.isArray(response.data)
+				? response.data
+				: (response.data?.products || []);
+			set({ products: productsData, loading: false });
 		} catch (error) {
 			set({ error: "Failed to fetch products", loading: false });
-			toast.error(error.response.data.error || "Failed to fetch products");
+			toast.error(error.response?.data?.error || "Failed to fetch products");
 		}
 	},
 	fetchProductsByCategory: async (category) => {
 		set({ loading: true });
 		try {
 			const response = await axios.get(`/products/category/${category}`);
-			set({ products: response.data.products, loading: false });
+			// 🔥 FIX
+			const productsData = Array.isArray(response.data)
+				? response.data
+				: (response.data?.products || []);
+			set({ products: productsData, loading: false });
 		} catch (error) {
 			set({ error: "Failed to fetch products", loading: false });
-			toast.error(error.response.data.error || "Failed to fetch products");
+			toast.error(error.response?.data?.error || "Failed to fetch products");
 		}
 	},
 	deleteProduct: async (productId) => {
@@ -73,9 +81,20 @@ export const useProductStore = create((set) => ({
 		set({ loading: true });
 		try {
 			const response = await axios.get("/products/featured");
-			set({ products: response.data, loading: false });
+
+			// 🔥 FIX: Handle both array and object responses
+			let productsData = [];
+			if (Array.isArray(response.data)) {
+				productsData = response.data;
+			} else if (response.data?.products && Array.isArray(response.data.products)) {
+				productsData = response.data.products;
+			} else {
+				productsData = [];
+			}
+
+			set({ products: productsData, loading: false });
 		} catch (error) {
-			set({ error: "Failed to fetch products", loading: false });
+			set({ error: "Failed to fetch products", loading: false, products: [] });
 			console.log("Error fetching featured products:", error);
 		}
 	},
